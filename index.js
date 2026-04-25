@@ -176,6 +176,27 @@ app.post('/api/process-payment', async (req, res) => {
     }
 });
 
+// 5. Update Status (Bookings/Enquiries)
+app.patch('/api/:type/:id/status', async (req, res) => {
+    const { type, id } = req.params;
+    const { status } = req.body;
+    const table = type === 'bookings' ? 'bookings' : 'enquiries';
+
+    try {
+        const { data, error } = await supabase
+            .from(table)
+            .update({ status })
+            .eq('id', id)
+            .select();
+
+        if (error) throw error;
+        res.status(200).json({ success: true, data });
+    } catch (error) {
+        console.error(`Error updating ${table} status:`, error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
 // Start Server
 app.listen(port, () => {
     console.log(`Server running on port ${port}`);
