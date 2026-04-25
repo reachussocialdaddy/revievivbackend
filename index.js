@@ -3,7 +3,8 @@ const cors = require('cors');
 const morgan = require('morgan');
 const dotenv = require('dotenv');
 const { createClient } = require('@supabase/supabase-js');
-const { Client, Environment } = require('square');
+const square = require('square');
+const Client = square.Client;
 const crypto = require('crypto');
 
 dotenv.config();
