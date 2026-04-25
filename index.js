@@ -24,7 +24,7 @@ const supabase = createClient(
 
 // Square Client
 const squareClient = new Client({
-    environment: process.env.NODE_ENV === 'production' ? Environment.Production : Environment.Sandbox,
+    environment: process.env.NODE_ENV === 'production' ? 'production' : 'sandbox',
     accessToken: process.env.SQUARE_ACCESS_TOKEN,
 });
 
