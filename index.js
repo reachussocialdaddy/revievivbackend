@@ -3,8 +3,7 @@ const cors = require('cors');
 const morgan = require('morgan');
 const dotenv = require('dotenv');
 const { createClient } = require('@supabase/supabase-js');
-const square = require('square');
-const Client = square.Client;
+const { Client, Environment } = require('square');
 const crypto = require('crypto');
 
 dotenv.config();
@@ -25,7 +24,7 @@ const supabase = createClient(
 
 // Square Client
 const squareClient = new Client({
-    environment: process.env.NODE_ENV === 'production' ? 'production' : 'sandbox',
+    environment: process.env.NODE_ENV === 'production' ? Environment.Production : Environment.Sandbox,
     accessToken: process.env.SQUARE_ACCESS_TOKEN,
 });
 
