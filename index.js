@@ -73,7 +73,7 @@ app.post('/api/bookings', async (req, res) => {
                 date: customerInfo.date,
                 timeslot: customerInfo.timeslot,
                 location: `${customerInfo.street}, ${customerInfo.city} ${customerInfo.zip}`,
-                instructions: customerInfo.instructions || '',
+                instructions: (customerInfo.instructions || '') + (customerInfo.guestInfo ? `\n\n[GROUP GUEST]\nName: ${customerInfo.guestInfo.name}\nEmail: ${customerInfo.guestInfo.email}\nPhone: ${customerInfo.guestInfo.phone}` : ''),
                 total_amount: totalAmount,
                 amount_paid: 0,
                 cart_items: customerInfo.cart || [],
