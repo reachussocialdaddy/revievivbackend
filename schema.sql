@@ -14,6 +14,7 @@ CREATE TABLE bookings (
     cart_items JSONB,
     payment_id TEXT,
     status TEXT DEFAULT 'Pending',
+    session_status TEXT DEFAULT 'Pending',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 

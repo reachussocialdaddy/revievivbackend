@@ -214,13 +214,17 @@ app.post('/api/process-payment', async (req, res) => {
 // 5. Update Status (Bookings/Enquiries)
 app.patch('/api/:type/:id/status', async (req, res) => {
     const { type, id } = req.params;
-    const { status } = req.body;
+    const { status, session_status } = req.body;
     const table = type === 'bookings' ? 'bookings' : 'enquiries';
+
+    let updateData = {};
+    if (status) updateData.status = status;
+    if (session_status) updateData.session_status = session_status;
 
     try {
         const { data, error } = await supabase
             .from(table)
-            .update({ status })
+            .update(updateData)
             .eq('id', id)
             .select();
 
