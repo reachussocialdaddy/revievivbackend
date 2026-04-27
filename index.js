@@ -77,7 +77,8 @@ app.post('/api/bookings', async (req, res) => {
                 total_amount: totalAmount,
                 amount_paid: 0,
                 cart_items: customerInfo.cart || [],
-                status: 'Pending Payment'
+                status: 'Pending Payment',
+                booking_type: bookingType
             }])
             .select();
 
