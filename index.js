@@ -48,6 +48,47 @@ app.get('/api/bookings', async (req, res) => {
     res.json(data);
 });
 
+app.post('/api/bookings', async (req, res) => {
+    const { customerInfo } = req.body;
+    
+    if (!customerInfo) {
+        return res.status(400).json({ error: 'Missing customer information' });
+    }
+
+    try {
+        const subtotal = customerInfo.cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+        const bookingType = customerInfo.bookingType || 'individual';
+        let totalAmount = subtotal;
+        
+        if (bookingType === 'group') {
+            totalAmount = subtotal * 0.90; // 10% discount
+        }
+
+        const { data, error } = await supabase
+            .from('bookings')
+            .insert([{
+                customer_name: `${customerInfo.fname} ${customerInfo.lname}`,
+                email: customerInfo.email,
+                phone: customerInfo.phone,
+                date: customerInfo.date,
+                timeslot: customerInfo.timeslot,
+                location: `${customerInfo.street}, ${customerInfo.city} ${customerInfo.zip}`,
+                instructions: customerInfo.instructions || '',
+                total_amount: totalAmount,
+                amount_paid: 0,
+                cart_items: customerInfo.cart || [],
+                status: 'Pending Payment'
+            }])
+            .select();
+
+        if (error) throw error;
+        res.status(201).json({ success: true, bookingId: data[0].id });
+    } catch (error) {
+        console.error('Booking creation error:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // 3. Enquiries
 app.get('/api/enquiries', async (req, res) => {
     const { data, error } = await supabase
@@ -110,59 +151,53 @@ app.post('/api/products', async (req, res) => {
 
 // 5. Payments & Bookings Integration
 app.post('/api/process-payment', async (req, res) => {
-    const { sourceId, currency, customerInfo } = req.body;
+    const { sourceId, currency, bookingId } = req.body;
 
-    if (!sourceId || !customerInfo || !customerInfo.cart) {
+    if (!sourceId || !bookingId) {
         return res.status(400).json({ error: 'Missing required parameters' });
     }
 
     try {
-        const subtotal = customerInfo.cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-        const bookingType = customerInfo.bookingType || 'individual';
-        let finalTotal = subtotal;
-        
-        if (bookingType === 'group') {
-            finalTotal = subtotal * 0.90; // 10% discount
+        // 1. Get the booking details
+        const { data: booking, error: fetchError } = await supabase
+            .from('bookings')
+            .select('*')
+            .eq('id', bookingId)
+            .single();
+
+        if (fetchError || !booking) {
+            return res.status(404).json({ error: 'Booking not found' });
         }
-        
-        const amount = finalTotal * 0.20; // 20% advance
+
+        const totalAmount = parseFloat(booking.total_amount);
+        const amountToPay = totalAmount * 0.20; // 20% advance
         const idempotencyKey = crypto.randomUUID();
 
-        // Create Square Payment
+        // 2. Create Square Payment
         const paymentResponse = await squareClient.paymentsApi.createPayment({
             sourceId,
             idempotencyKey,
             amountMoney: {
-                amount: BigInt(Math.round(amount * 100)),
+                amount: BigInt(Math.round(amountToPay * 100)),
                 currency: currency || 'USD',
             },
         });
 
         const payment = paymentResponse.result.payment;
 
-        // Create Booking in Supabase
-        const { data: bookingData, error: bookingError } = await supabase
+        // 3. Update Booking in Supabase
+        const { error: updateError } = await supabase
             .from('bookings')
-            .insert([{
-                customer_name: `${customerInfo.fname} ${customerInfo.lname}`,
-                email: customerInfo.email,
-                phone: customerInfo.phone,
-                date: customerInfo.date,
-                timeslot: customerInfo.timeslot,
-                location: `${customerInfo.street}, ${customerInfo.city} ${customerInfo.zip}`,
-                instructions: customerInfo.instructions || '',
-                amount_paid: amount,
-                cart_items: customerInfo.cart || [],
+            .update({
+                amount_paid: amountToPay,
                 payment_id: payment.id,
-                status: 'Pending'
-            }]);
+                status: 'Confirmed'
+            })
+            .eq('id', bookingId);
 
-        if (bookingError) {
-            console.error('Booking creation error:', bookingError);
-            // Even if booking fails, payment succeeded. We should log this carefully.
+        if (updateError) {
+            console.error('Booking update error:', updateError);
         }
-
-
 
         res.status(200).json({ success: true, paymentId: payment.id });
 

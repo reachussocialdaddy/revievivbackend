@@ -9,6 +9,7 @@ CREATE TABLE bookings (
     timeslot TEXT,
     location TEXT,
     instructions TEXT,
+    total_amount DECIMAL,
     amount_paid DECIMAL,
     cart_items JSONB,
     payment_id TEXT,
